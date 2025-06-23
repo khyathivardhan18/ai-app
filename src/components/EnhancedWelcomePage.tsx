@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { MessageCircle, FolderOpen, GitBranch, Settings, CheckCircle, AlertCircle } from 'lucide-react'
@@ -12,9 +12,13 @@ import { detectBrowserCapabilities, getBrowserName } from '../utils/browserCompa
 
 const EnhancedWelcomePage: React.FC = () => {
   const navigate = useNavigate()
-  const { createChat, state } = useApp()
+  const { createChat, state, setCurrentChat } = useApp()
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
   const [browserCapabilities] = useState(detectBrowserCapabilities())
+
+  useEffect(() => {
+    setCurrentChat(null)
+  }, [setCurrentChat])
 
   const handleOpenProject = () => {
     setIsProjectModalOpen(true)

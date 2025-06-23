@@ -8,4 +8,19 @@ export default defineConfig({
     exclude: ["bippy/dist/jsx-dev-runtime", "bippy/dist/jsx-runtime"],
   },
   base: '/ai-app/',
+  build: {
+    target: 'es2015', // Support older browsers
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+        }
+      }
+    }
+  },
+  server: {
+    host: '0.0.0.0',
+    port: 5173
+  }
 });

@@ -15,29 +15,32 @@ const EnhancedWelcomePage: React.FC = () => {
   const { createChat, state, setCurrentChatId, toggleTheme } = useApp()
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
   const [browserCapabilities] = useState(detectBrowserCapabilities())
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     setCurrentChatId(null)
-  }, [setCurrentChatId])
+  }, [])
 
   const handleOpenProject = () => {
     setIsProjectModalOpen(true)
   }
 
-  const handleProjectSelect = (project: { id: string; name: string; path: string }) => {
-    const chatId = createChat(`Project: ${project.name}`)
+  const handleProjectSelect = async (project: { id: string; name: string; path: string }) => {
+    setIsLoading(true)
+    try {
+      const chatId = createChat(`Project: ${project.name}`)
 
-    // Check if this is an uploaded project with stored data
-    const storedProjectData = sessionStorage.getItem(`project_${project.id}`)
-    let prompt = ''
+      // Check if this is an uploaded project with stored data
+      const storedProjectData = sessionStorage.getItem(`project_${project.id}`)
+      let prompt = ''
 
-    if (storedProjectData) {
-      try {
-        const projectData = JSON.parse(storedProjectData)
-        const fileStructure = projectData.structure.join('\n')
-        const importantFiles = Object.keys(projectData.files).slice(0, 5) // Show first 5 files
+      if (storedProjectData) {
+        try {
+          const projectData = JSON.parse(storedProjectData)
+          const fileStructure = projectData.structure.join('\n')
+          const importantFiles = Object.keys(projectData.files).slice(0, 5) // Show first 5 files
 
-        prompt = encodeURIComponent(`I've uploaded a project called "${project.name}" with the following structure:
+          prompt = encodeURIComponent(`I've uploaded a project called "${project.name}" with the following structure:
 
 File structure:
 ${fileStructure}
@@ -52,13 +55,13 @@ Please help me understand this codebase and suggest how I can:
 • Add new features
 
 What aspects of this project would you like to explore first?`)
-      } catch (error) {
-        console.error('Error parsing stored project data:', error)
+        } catch (error) {
+          console.error('Error parsing stored project data:', error)
+        }
       }
-    }
 
-    if (!prompt) {
-      prompt = encodeURIComponent(`I'm working on a project called "${project.name}" located at ${project.path}.
+      if (!prompt) {
+        prompt = encodeURIComponent(`I'm working on a project called "${project.name}" located at ${project.path}.
 
 This is a development project that I need help with. Can you assist me with:
 • Understanding the project structure
@@ -68,12 +71,18 @@ This is a development project that I need help with. Can you assist me with:
 • Best practices and optimization
 
 What would you like to know about this project?`)
-    }
+      }
 
-    navigate(`/chat/${chatId}?prompt=${prompt}`)
+      // Add a small delay for smooth transition
+      await new Promise(resolve => setTimeout(resolve, 300))
+      navigate(`/ide/${chatId}?prompt=${prompt}`)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleBrowseProject = async () => {
+    setIsLoading(true)
     try {
       const project = await fileSystemManager.openProject()
 
@@ -82,7 +91,10 @@ What would you like to know about this project?`)
         const projectContext = fileSystemManager.generateProjectContext(project.files)
 
         const chatId = createChat(`Project: ${project.name}`)
-        navigate(`/chat/${chatId}?prompt=${encodeURIComponent(`I've opened a project called "${project.name}" with ${project.totalFiles} files.\n\nProject structure and key files:\n${projectContext}\n\nPlease help me understand this codebase and suggest how I can:\n• Analyze the project architecture\n• Identify key components and files\n• Find potential improvements\n• Debug any issues\n• Add new features\n\nWhat aspects of this project would you like to explore first?`)}`)
+        
+        // Add a small delay for smooth transition
+        await new Promise(resolve => setTimeout(resolve, 300))
+        navigate(`/ide/${chatId}?prompt=${encodeURIComponent(`I've opened a project called "${project.name}" with ${project.totalFiles} files.\n\nProject structure and key files:\n${projectContext}\n\nPlease help me understand this codebase and suggest how I can:\n• Analyze the project architecture\n• Identify key components and files\n• Find potential improvements\n• Debug any issues\n• Add new features\n\nWhat aspects of this project would you like to explore first?`)}`)
       }
     } catch (error) {
       console.error('Error opening project:', error)
@@ -100,35 +112,13 @@ What would you like to know about this project?`)
         const projectLines = projectInfo.trim().split('\n')
         const projectName = projectLines[0].split(/[,.-]/)[0].trim() || 'Project'
         const chatId = createChat(`Project: ${projectName}`)
-        navigate(`/chat/${chatId}?prompt=${encodeURIComponent(`I'm working on a project: ${projectInfo}\n\nCan you help me analyze this project and suggest next steps? Please ask me any clarifying questions about the codebase, architecture, or specific issues I'm facing.`)}`)
+        
+        // Add a small delay for smooth transition
+        await new Promise(resolve => setTimeout(resolve, 300))
+        navigate(`/ide/${chatId}?prompt=${encodeURIComponent(`I'm working on a project: ${projectInfo}\n\nCan you help me analyze this project and suggest next steps? Please ask me any clarifying questions about the codebase, architecture, or specific issues I'm facing.`)}`)
       }
-    }
-  }
-
-  const handleCloneRepo = () => {
-    const repoUrl = prompt(
-      'Enter repository information:\n\n' +
-      '• GitHub URL (e.g., https://github.com/user/repo)\n' +
-      '• OR describe the type of repository you want to explore\n\n' +
-      'Example: "https://github.com/facebook/react" or "Looking for a React component library"'
-    )
-
-    if (repoUrl?.trim()) {
-      let chatTitle = 'Repository Analysis'
-      let prompt = ''
-
-      // Check if it's a URL
-      if (repoUrl.includes('github.com') || repoUrl.includes('gitlab.com') || repoUrl.includes('bitbucket.org')) {
-        const repoName = repoUrl.split('/').pop()?.replace('.git', '') || 'Repository'
-        chatTitle = `Repo: ${repoName}`
-        prompt = `I want to analyze this repository: ${repoUrl}\n\nCan you help me understand:\n• What this project does\n• The main technologies used\n• How to get started with development\n• Key files and structure to examine\n\nPlease guide me through exploring this codebase.`
-      } else {
-        chatTitle = 'Repository Search'
-        prompt = `I'm looking for: ${repoUrl}\n\nCan you help me:\n• Find relevant repositories\n• Understand what to look for\n• Compare different options\n• Get started with the right tools\n\nWhat would you recommend?`
-      }
-
-      const chatId = createChat(chatTitle)
-      navigate(`/chat/${chatId}?prompt=${encodeURIComponent(prompt)}`)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -137,28 +127,27 @@ What would you like to know about this project?`)
       icon: MessageCircle,
       title: "New Chat",
       description: "Start a conversation with Edith AI",
-      action: () => {
-        const chatId = createChat()
-        navigate(`/chat/${chatId}`)
+      action: async () => {
+        setIsLoading(true)
+        try {
+          const chatId = createChat()
+          // Add a small delay for smooth transition
+          await new Promise(resolve => setTimeout(resolve, 300))
+          navigate(`/chat/${chatId}`)
+        } finally {
+          setIsLoading(false)
+        }
       },
       color: "from-blue-600 to-cyan-700",
       delay: 0.1
     },
     {
       icon: FolderOpen,
-      title: "Analyze Project",
-      description: "Get AI help with your development project",
+      title: "Open File/Project",
+      description: "Open IDE with file system access",
       action: handleOpenProject,
       color: "from-green-600 to-emerald-700",
       delay: 0.2
-    },
-    {
-      icon: GitBranch,
-      title: "Explore Repository",
-      description: "Analyze and understand code repositories",
-      action: handleCloneRepo,
-      color: "from-purple-600 to-violet-700",
-      delay: 0.3
     }
   ]
 
@@ -210,12 +199,12 @@ What would you like to know about this project?`)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-zinc-950 to-black text-white overflow-hidden relative">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background text-foreground overflow-hidden relative">
       <ParticleBackground density={80} />
 
       {/* Theme toggle button in top-right corner */}
       <motion.button
-        className="fixed top-6 right-6 z-20 p-3 bg-gradient-to-r from-black/60 via-zinc-900/80 to-black/60 border border-yellow-500/30 rounded-lg backdrop-blur-sm hover:border-yellow-400/50 transition-all duration-300"
+        className="fixed top-6 right-6 z-20 p-3 bg-gradient-to-r from-background/60 via-background/80 to-background/60 border border-primary/30 rounded-lg backdrop-blur-sm hover:border-primary/50 transition-all duration-300"
         onClick={toggleTheme}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -317,40 +306,50 @@ What would you like to know about this project?`)
                    style={{ backgroundImage: `linear-gradient(135deg, ${button.color.split(' ')[1]}, ${button.color.split(' ')[3]})` }} />
 
               <motion.div
-                className="relative bg-gradient-to-br from-black/70 via-zinc-900/80 to-black/70 border border-yellow-500/20 rounded-xl p-8 w-56 hover:border-yellow-400/40 transition-all duration-500 cursor-pointer backdrop-blur-md"
+                className={`relative bg-gradient-to-br from-background/70 via-background/80 to-background/70 border border-primary/20 rounded-xl p-8 w-56 hover:border-primary/40 transition-all duration-500 cursor-pointer backdrop-blur-md ${isLoading ? 'pointer-events-none opacity-50' : ''}`}
                 onClick={button.action}
-                whileHover={{
+                whileHover={!isLoading ? {
                   boxShadow: "0 25px 50px rgba(0,0,0,0.4), 0 0 30px rgba(255,215,0,0.1)",
                   y: -8
-                }}
+                } : {}}
                 style={{
                   background: 'linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(24,24,27,0.9) 50%, rgba(0,0,0,0.8) 100%)',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,215,0,0.1)'
                 }}
               >
-                {/* Ultra-luxury border effect */}
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-yellow-500/10 via-amber-400/15 to-yellow-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="absolute inset-[1px] rounded-xl bg-gradient-to-br from-transparent via-yellow-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                <div className="relative z-10">
+                {/* Loading spinner */}
+                {isLoading && (
                   <motion.div
-                    className="text-amber-200/80 group-hover:text-yellow-300 transition-colors duration-500 mb-4"
-                    whileHover={{
-                      rotate: 360,
-                      scale: 1.1
-                    }}
-                    transition={{ duration: 0.8 }}
-                    style={{
-                      filter: 'drop-shadow(0 0 20px rgba(255,215,0,0.3))'
-                    }}
+                    className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-xl backdrop-blur-sm"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <button.icon size={28} />
+                    <motion.div
+                      className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    />
                   </motion.div>
-                  <h3 className="text-amber-100 font-bold mb-3 text-lg tracking-wide">{button.title}</h3>
-                  <p className="text-amber-200/70 text-sm group-hover:text-amber-100/90 transition-colors duration-500 leading-relaxed">
-                    {button.description}
-                  </p>
-                </div>
+                )}
+
+                <motion.div
+                  className="flex flex-col items-center text-center"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: button.delay, duration: 0.6 }}
+                >
+                  <motion.div
+                    className={`p-4 rounded-full mb-4 bg-gradient-to-r ${button.color} shadow-lg`}
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 10 }}
+                  >
+                    <button.icon size={32} className="text-white" />
+                  </motion.div>
+
+                  <h3 className="text-xl font-bold mb-2 text-foreground">{button.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{button.description}</p>
+                </motion.div>
               </motion.div>
             </motion.div>
           ))}
@@ -378,7 +377,11 @@ What would you like to know about this project?`)
                 }}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate(`/chat/${chat.id}`)}
+                onClick={() => {
+                  // Navigate to IDE for project chats, chat for regular chats
+                  const isProjectChat = chat.name.startsWith('Project:') || chat.name.startsWith('Repo:')
+                  navigate(isProjectChat ? `/ide/${chat.id}` : `/chat/${chat.id}`)
+                }}
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-3 h-3 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 group-hover:from-yellow-300 group-hover:to-amber-400 transition-all duration-300 shadow-lg" style={{
@@ -426,11 +429,15 @@ What would you like to know about this project?`)
 
         {/* Browser Compatibility Status */}
         <motion.div
-          className="absolute bottom-8 right-8 text-amber-200/50 text-xs flex items-center gap-2"
+          className="absolute bottom-8 right-8 text-amber-200/50 text-xs flex items-center gap-2 group"
           variants={itemVariants}
           style={{
             textShadow: '0 0 10px rgba(255,215,0,0.1)'
           }}
+          title={browserCapabilities.hasFileSystemAccess 
+            ? "Your browser supports full file system access! 🎉" 
+            : "Demo mode: You can still use all AI features with sample files"
+          }
         >
           <span className="font-medium">{getBrowserName()}</span>
           <div className="flex items-center gap-1">
@@ -439,14 +446,14 @@ What would you like to know about this project?`)
             ) : browserCapabilities.hasDirectoryUpload ? (
               <CheckCircle size={12} className="text-yellow-400" />
             ) : browserCapabilities.hasFileApi ? (
-              <AlertCircle size={12} className="text-orange-400" />
+              <CheckCircle size={12} className="text-blue-400" />
             ) : (
-              <AlertCircle size={12} className="text-red-400" />
+              <CheckCircle size={12} className="text-green-400" />
             )}
             <span className="opacity-80">
-              {browserCapabilities.hasFileSystemAccess ? 'Full Support' :
-               browserCapabilities.hasDirectoryUpload ? 'Folder Upload' :
-               browserCapabilities.hasFileApi ? 'File Upload' : 'Text Only'}
+              {browserCapabilities.hasFileSystemAccess ? 'Full Access' :
+               browserCapabilities.hasDirectoryUpload ? 'Demo Mode' :
+               browserCapabilities.hasFileApi ? 'Demo Mode' : 'Demo Mode'}
             </span>
           </div>
         </motion.div>

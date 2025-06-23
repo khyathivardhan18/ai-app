@@ -1,5 +1,6 @@
 import type React from 'react'
 import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Save, Search, Replace, Maximize2, Copy, FileText } from 'lucide-react'
 
 interface CodeEditorProps {
@@ -125,61 +126,92 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col bg-zinc-900">
+    <motion.div 
+      className="h-full flex flex-col bg-zinc-900"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       {/* Editor Header */}
-      <div className="h-10 bg-zinc-800 border-b border-zinc-700 flex items-center justify-between px-4">
+      <motion.div 
+        className="h-10 bg-zinc-800 border-b border-zinc-700 flex items-center justify-between px-4"
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
         <div className="flex items-center gap-2 text-sm">
-          <FileText size={14} className={getLanguageColor(language)} />
+          <motion.div
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            transition={{ type: "spring", stiffness: 300, damping: 10 }}
+          >
+            <FileText size={14} className={getLanguageColor(language)} />
+          </motion.div>
           <span className="font-medium">{filename}</span>
           <span className="text-zinc-500">•</span>
           <span className="text-zinc-500 capitalize">{language}</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <motion.button
             onClick={() => setShowSearch(!showSearch)}
-            className="p-1 hover:bg-zinc-700 rounded"
+            className="p-1 hover:bg-zinc-700 rounded transition-colors duration-200"
             title="Search (Ctrl+F)"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
             <Search size={14} />
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             onClick={copyToClipboard}
-            className="p-1 hover:bg-zinc-700 rounded"
+            className="p-1 hover:bg-zinc-700 rounded transition-colors duration-200"
             title="Copy All"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
             <Copy size={14} />
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             onClick={onSave}
-            className="p-1 hover:bg-zinc-700 rounded"
+            className="p-1 hover:bg-zinc-700 rounded transition-colors duration-200"
             title="Save (Ctrl+S)"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
             <Save size={14} />
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Search Bar */}
-      {showSearch && (
-        <div className="h-10 bg-zinc-800 border-b border-zinc-700 flex items-center px-4 gap-2">
-          <Search size={14} className="text-zinc-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search in file..."
-            className="flex-1 bg-zinc-700 text-white px-3 py-1 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-            autoFocus
-          />
-          <button
-            onClick={() => setShowSearch(false)}
-            className="p-1 hover:bg-zinc-700 rounded text-zinc-400"
+      <AnimatePresence>
+        {showSearch && (
+          <motion.div 
+            className="h-10 bg-zinc-800 border-b border-zinc-700 flex items-center px-4 gap-2"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 40, opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
           >
-            ×
-          </button>
-        </div>
-      )}
+            <Search size={14} className="text-zinc-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search in file..."
+              className="flex-1 bg-zinc-700 text-white px-3 py-1 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-200"
+              autoFocus
+            />
+            <motion.button
+              onClick={() => setShowSearch(false)}
+              className="p-1 hover:bg-zinc-700 rounded text-zinc-400 transition-colors duration-200"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              ×
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Editor Content */}
       <div className="flex-1 flex overflow-hidden">
@@ -236,7 +268,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           <span>UTF-8</span>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 

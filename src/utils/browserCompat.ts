@@ -134,16 +134,22 @@ export function getBrowserRecommendations(): string[] {
   const browser = detectBrowser()
   const recommendations: string[] = []
 
-  if (!browser.features.fileSystemAccess) {
-    recommendations.push('Use Chrome or Edge for full file system access')
+  // Only show recommendations if there are actual limitations
+  if (!browser.features.fileSystemAccess && browser.name !== 'Chrome' && browser.name !== 'Edge') {
+    recommendations.push('Switch to Chrome or Edge for real file system access')
   }
 
-  if (!browser.features.clipboard) {
-    recommendations.push('Copy/paste functionality may be limited')
+  if (!browser.features.clipboard && browser.name !== 'Chrome' && browser.name !== 'Edge') {
+    recommendations.push('Use Chrome or Edge for better copy/paste support')
   }
 
-  if (!browser.isSupported) {
-    recommendations.push('Consider using a modern browser for the best experience')
+  // Add positive recommendations for supported browsers
+  if (browser.features.fileSystemAccess) {
+    recommendations.push('✅ Full file system access available')
+  }
+
+  if (browser.features.clipboard) {
+    recommendations.push('✅ Copy/paste functionality available')
   }
 
   return recommendations

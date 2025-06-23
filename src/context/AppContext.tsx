@@ -81,7 +81,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             }))
           })) || [],
           currentChatId: parsed.currentChatId || null,
-          theme: 'dark',
+          theme: parsed.theme || 'dark',
           settings: { ...defaultSettings, ...parsed.settings }
         }
       } catch (error) {

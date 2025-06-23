@@ -13,6 +13,7 @@ import ChatInterface from './ChatInterface';
 import BrowserCompatibilityWarning from './BrowserCompatibilityWarning';
 import { useApp } from '../context/AppContext';
 import { FileSystemManager, isFileSystemAPISupported } from '../utils/fileSystem';
+import { motion } from 'framer-motion';
 
 // This is the new, functional IDELayout component.
 const IDELayout = () => {
@@ -27,19 +28,104 @@ const IDELayout = () => {
   const [showTerminal, setShowTerminal] = useState(true);
   const [showBrowserWarning, setShowBrowserWarning] = useState(true);
   const [projectName, setProjectName] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // Effect to load the current chat session
   useEffect(() => {
-    if (!chatId) {
-      navigate('/'); // Go home if no chat ID
-      return;
-    }
-    const currentChat = getChat(chatId);
-    if (!currentChat) {
-      // Maybe create a new chat or navigate away
-      navigate('/');
-    }
-  }, [chatId, getChat, navigate]);
+    const initializeChat = async () => {
+      setIsInitializing(true);
+      
+      if (!chatId) {
+        navigate('/'); // Go home if no chat ID
+        return;
+      }
+      
+      const currentChat = getChat(chatId);
+      if (!currentChat) {
+        // Maybe create a new chat or navigate away
+        navigate('/');
+        return;
+      }
+
+      // Check if this chat is for an uploaded project
+      const chatTitle = currentChat.title;
+      if (chatTitle.startsWith('Project: ')) {
+        const projectName = chatTitle.replace('Project: ', '');
+        
+        // Look for uploaded project data in sessionStorage
+        const projectKeys = Object.keys(sessionStorage).filter(key => key.startsWith('project_'));
+        for (const key of projectKeys) {
+          try {
+            const projectData = JSON.parse(sessionStorage.getItem(key) || '');
+            if (projectData && projectData.files) {
+              // Convert uploaded files to FileItem format
+              const fileItems: FileItem[] = [];
+              const filePaths = Object.keys(projectData.files);
+              
+              // Create directory structure
+              const directories = new Set<string>();
+              filePaths.forEach(path => {
+                const parts = path.split('/');
+                for (let i = 1; i < parts.length; i++) {
+                  directories.add(parts.slice(0, i).join('/'));
+                }
+              });
+
+              // Add directories
+              directories.forEach(dir => {
+                fileItems.push({
+                  name: dir.split('/').pop() || dir,
+                  path: dir,
+                  type: 'directory',
+                  children: []
+                });
+              });
+
+              // Add files
+              filePaths.forEach(path => {
+                const content = projectData.files[path];
+                fileItems.push({
+                  name: path.split('/').pop() || path,
+                  path: path,
+                  type: 'file',
+                  content: content,
+                  size: content.length
+                });
+              });
+
+              setProjectFiles(fileItems);
+              setProjectName(projectName);
+              
+              // Auto-expand root directories
+              const rootDirs = fileItems.filter(f => f.type === 'directory' && !f.path.includes('/')).map(f => f.path);
+              setExpandedDirs(new Set(rootDirs));
+              
+              // Auto-open first file with a small delay for smooth transition
+              setTimeout(() => {
+                const firstFile = fileItems.find(f => f.type === 'file');
+                if (firstFile) {
+                  handleFileOpen(firstFile);
+                }
+              }, 500);
+              
+              break; // Found the project, no need to continue
+            }
+          } catch (error) {
+            console.error('Error parsing project data:', error);
+          }
+        }
+      }
+      
+      // Add a small delay for smooth transition
+      setTimeout(() => {
+        setIsInitializing(false);
+        setIsLoading(false);
+      }, 300);
+    };
+
+    initializeChat();
+  }, [chatId]);
 
   // Auto-load demo project for unsupported browsers
   useEffect(() => {
@@ -228,127 +314,168 @@ const IDELayout = () => {
   const activeTab = openTabs.find(tab => tab.path === activeTabPath);
 
   return (
-    <div className="h-screen bg-zinc-900 text-white flex flex-col overflow-hidden">
-      <header className="h-10 bg-zinc-800 border-b border-zinc-700 flex items-center justify-between px-4 text-sm flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/')} className="p-1 hover:bg-zinc-700 rounded" title="Back to Welcome">
-            <ArrowLeft size={16} />
-          </button>
-          <span>Edith AI IDE</span>
-          {projectName && (
-            <span className="text-zinc-400">- {projectName}</span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowTerminal(!showTerminal)}
-            className="p-1 hover:bg-zinc-700 rounded"
-            title="Toggle Terminal"
-          >
-            <Terminal size={16} />
-          </button>
-        </div>
-      </header>
-
-      <PanelGroup direction="horizontal" className="flex-grow">
-        <Panel defaultSize={20} minSize={15}>
-          <div className="p-2 border-b border-zinc-800">
-            <button
-              onClick={handleOpenProject}
-              className="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-zinc-800"
+    <div className="h-screen bg-background text-foreground flex flex-col">
+      {/* Loading Screen */}
+      {isInitializing && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background"
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="text-center">
+            <motion.div
+              className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full mx-auto mb-4"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.h2
+              className="text-xl font-semibold text-foreground mb-2"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
             >
-              <FolderOpen size={16} />
-              {isFileSystemAPISupported() ? 'Open Project' : 'Load Demo Project'}
-            </button>
+              Loading IDE...
+            </motion.h2>
+            <motion.p
+              className="text-muted-foreground"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              Preparing your development environment
+            </motion.p>
           </div>
-          
-          {showBrowserWarning && (
-            <div className="p-2">
-              <BrowserCompatibilityWarning 
-                onDismiss={() => setShowBrowserWarning(false)}
-              />
+        </motion.div>
+      )}
+
+      {/* Browser Compatibility Warning */}
+      {showBrowserWarning && !isFileSystemAPISupported() && (
+        <BrowserCompatibilityWarning onDismiss={() => setShowBrowserWarning(false)} />
+      )}
+
+      {/* Main IDE Layout */}
+      <motion.div
+        className="flex-1 flex"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <div className="h-screen bg-zinc-900 text-white flex flex-col overflow-hidden">
+          <header className="h-10 bg-zinc-800 border-b border-zinc-700 flex items-center justify-between px-4 text-sm flex-shrink-0">
+            <div className="flex items-center gap-4">
+              <button onClick={() => navigate('/')} className="p-1 hover:bg-zinc-700 rounded" title="Back to Welcome">
+                <ArrowLeft size={16} />
+              </button>
+              <span>Edith AI IDE</span>
+              {projectName && (
+                <span className="text-zinc-400">- {projectName}</span>
+              )}
             </div>
-          )}
-          
-          <FileTree
-            files={projectFiles}
-            onFileSelect={handleFileOpen}
-            onFileOpen={handleFileOpen}
-            selectedFile={activeTabPath || ''}
-            expandedDirs={expandedDirs}
-            onToggleDir={(path) =>
-              setExpandedDirs(prev => {
-                const newSet = new Set(prev);
-                if (newSet.has(path)) newSet.delete(path);
-                else newSet.add(path);
-                return newSet;
-              })
-            }
-          />
-        </Panel>
-        <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-blue-600 transition-colors" />
-        <Panel>
-          <PanelGroup direction="vertical">
-            <Panel>
-              <div className="flex flex-col h-full">
-                <div className="h-10 bg-zinc-800 border-b border-zinc-700 flex items-center flex-shrink-0">
-                  {openTabs.map(tab => (
-                    <div
-                      key={tab.path}
-                      onClick={() => setActiveTabPath(tab.path)}
-                      className={`flex items-center px-3 py-2 border-r border-zinc-700 cursor-pointer group ${
-                        activeTabPath === tab.path ? 'bg-zinc-900' : ''
-                      }`}
-                    >
-                      <span className="truncate">{tab.name}{tab.isDirty ? '*' : ''}</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleTabClose(tab.path);
-                        }}
-                        className="ml-2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-zinc-700"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex-1">
-                  {activeTab ? (
-                    <CodeEditor
-                      content={activeTab.content}
-                      language={activeTab.language}
-                      filename={activeTab.name}
-                      onChange={(value) => handleContentChange(activeTab.path, value)}
-                      onSave={() => handleSave(activeTab.path)}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-zinc-500">
-                      <div className="text-center">
-                        <Folder className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>No file selected</p>
-                        <p className="text-sm">Open a file from the file tree to start editing</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowTerminal(!showTerminal)}
+                className="p-1 hover:bg-zinc-700 rounded"
+                title="Toggle Terminal"
+              >
+                <Terminal size={16} />
+              </button>
+            </div>
+          </header>
+
+          <PanelGroup direction="horizontal" className="flex-grow">
+            <Panel defaultSize={20} minSize={15}>
+              <div className="p-2 border-b border-zinc-800">
+                <button
+                  onClick={handleOpenProject}
+                  className="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-zinc-800"
+                >
+                  <FolderOpen size={16} />
+                  {isFileSystemAPISupported() ? 'Open Project' : 'Load Demo Project'}
+                </button>
               </div>
+              
+              <FileTree
+                files={projectFiles}
+                onFileSelect={handleFileOpen}
+                onFileOpen={handleFileOpen}
+                selectedFile={activeTabPath || ''}
+                expandedDirs={expandedDirs}
+                onToggleDir={(path) =>
+                  setExpandedDirs(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(path)) newSet.delete(path);
+                    else newSet.add(path);
+                    return newSet;
+                  })
+                }
+              />
             </Panel>
-            {showTerminal && (
-              <>
-                <PanelResizeHandle className="h-1 bg-zinc-800 hover:bg-blue-600 transition-colors" />
-                <Panel defaultSize={25} minSize={15}>
-                  <TerminalPanel onClose={() => setShowTerminal(false)} />
+            <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-blue-600 transition-colors" />
+            <Panel>
+              <PanelGroup direction="vertical">
+                <Panel>
+                  <div className="flex flex-col h-full">
+                    <div className="h-10 bg-zinc-800 border-b border-zinc-700 flex items-center flex-shrink-0">
+                      {openTabs.map(tab => (
+                        <div
+                          key={tab.path}
+                          onClick={() => setActiveTabPath(tab.path)}
+                          className={`flex items-center px-3 py-2 border-r border-zinc-700 cursor-pointer group ${
+                            activeTabPath === tab.path ? 'bg-zinc-900' : ''
+                          }`}
+                        >
+                          <span className="truncate">{tab.name}{tab.isDirty ? '*' : ''}</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTabClose(tab.path);
+                            }}
+                            className="ml-2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-zinc-700"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex-1">
+                      {activeTab ? (
+                        <CodeEditor
+                          content={activeTab.content}
+                          language={activeTab.language}
+                          filename={activeTab.name}
+                          onChange={(value) => handleContentChange(activeTab.path, value)}
+                          onSave={() => handleSave(activeTab.path)}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-zinc-500">
+                          <div className="text-center">
+                            <Folder className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                            <p>No file selected</p>
+                            <p className="text-sm">Open a file from the file tree to start editing</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </Panel>
-              </>
-            )}
+                {showTerminal && (
+                  <>
+                    <PanelResizeHandle className="h-1 bg-zinc-800 hover:bg-blue-600 transition-colors" />
+                    <Panel defaultSize={25} minSize={15}>
+                      <TerminalPanel onClose={() => setShowTerminal(false)} />
+                    </Panel>
+                  </>
+                )}
+              </PanelGroup>
+            </Panel>
+            <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-blue-600 transition-colors" />
+            <Panel defaultSize={30} minSize={20}>
+              <ChatInterface chatId={chatId!} />
+            </Panel>
           </PanelGroup>
-        </Panel>
-        <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-blue-600 transition-colors" />
-        <Panel defaultSize={30} minSize={20}>
-          <ChatInterface chatId={chatId!} />
-        </Panel>
-      </PanelGroup>
+        </div>
+      </motion.div>
     </div>
   );
 };

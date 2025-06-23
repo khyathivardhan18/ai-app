@@ -46,7 +46,7 @@ const MetallicLogo: React.FC<{ size?: number }> = ({ size = 80 }) => {
 
           {/* Premium shadow */}
           <filter id="premiumShadow">
-            <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#ffd700" flood-opacity="0.3"/>
+            <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="#ffd700" floodOpacity="0.3"/>
           </filter>
 
           {/* Glow effect */}

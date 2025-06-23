@@ -59,7 +59,7 @@ const MessageComponent: React.FC<MessageComponentProps> = ({ message, isStreamin
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-sm font-medium text-slate-300">
-            {message.sender === 'user' ? 'You' : 'Gemini AI'}
+            {message.sender === 'user' ? 'You' : 'Edith AI'}
           </span>
           <span className="text-xs text-slate-500">
             {message.timestamp.toLocaleTimeString()}
@@ -540,7 +540,7 @@ const ChatInterface: React.FC = () => {
               </div>
               <div className="flex items-center gap-2 text-slate-400">
                 <Loader2 size={16} className="animate-spin" />
-                <span>Gemini is thinking...</span>
+                <span>Edith is thinking...</span>
               </div>
             </motion.div>
           )}
@@ -581,7 +581,7 @@ const ChatInterface: React.FC = () => {
                 value={input}
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
-                placeholder="Message Gemini AI... Use @ to reference files"
+                placeholder="Message Edith AI... Use @ to reference files"
                 disabled={isLoading}
                 className="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-3 text-white placeholder-slate-400 resize-none focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 rows={1}

@@ -28,7 +28,7 @@ const TerminalPanel: React.FC<TerminalPanelProps> = ({ onClose }) => {
     const welcomeLine: TerminalLine = {
       id: `line_${Date.now()}`,
       type: 'output',
-      content: 'Gemini AI Terminal - AI-powered command assistant',
+      content: 'Edith AI Terminal - AI-powered command assistant',
       timestamp: new Date()
     }
     setLines([welcomeLine])

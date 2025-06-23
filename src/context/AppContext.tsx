@@ -51,7 +51,7 @@ const defaultSettings = {
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AppState>(() => {
     // Load from localStorage if available
-    const saved = localStorage.getItem('gemini-ai-state')
+    const saved = localStorage.getItem('edith-ai-state')
 
     if (saved) {
       try {
@@ -97,7 +97,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('gemini-ai-state', JSON.stringify(state))
+    localStorage.setItem('edith-ai-state', JSON.stringify(state))
   }, [state])
 
   const createChat = (title = 'New Chat'): string => {

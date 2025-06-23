@@ -10,7 +10,7 @@ const WelcomePage: React.FC = () => {
         </svg>
       ),
       title: "Start Chat",
-      description: "Begin conversation with Gemini AI"
+      description: "Begin conversation with Edith AI"
     },
     {
       icon: (
@@ -50,7 +50,7 @@ const WelcomePage: React.FC = () => {
         <div className="flex flex-col items-center mb-12">
           <MetallicLogo size={120} />
           <h1 className="text-4xl font-bold mt-6 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-300 bg-clip-text text-transparent">
-            Gemini AI
+            Edith AI
           </h1>
           <p className="text-slate-400 mt-2 text-lg">
             Pro • <span className="text-blue-400 hover:text-blue-300 cursor-pointer transition-colors">Settings</span>
@@ -111,7 +111,7 @@ const WelcomePage: React.FC = () => {
 
         {/* Footer */}
         <div className="absolute bottom-8 left-8 text-slate-500 text-sm flex items-center gap-4">
-          <span>Gemini AI Assistant</span>
+          <span>Edith AI</span>
           <div className="w-1 h-1 rounded-full bg-slate-600" />
           <span>v1.0.0</span>
         </div>

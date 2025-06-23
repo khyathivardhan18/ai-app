@@ -444,8 +444,8 @@ const ChatInterface: React.FC = () => {
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              onClick={() => navigate('/')}
-              className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800"
+              onClick={() => navigate(-1)}
+              className="p-2 text-slate-400 hover:text-white transition-colors"
             >
               <ArrowLeft size={20} />
             </motion.button>

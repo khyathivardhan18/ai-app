@@ -8,7 +8,7 @@ import SettingsPage from './components/SettingsPage'
 function App() {
   return (
     <AppProvider>
-      <Router>
+      <Router basename="/gemini-ai-app">
         <Routes>
           <Route path="/" element={<EnhancedWelcomePage />} />
           <Route path="/chat/:chatId" element={<ChatInterface />} />

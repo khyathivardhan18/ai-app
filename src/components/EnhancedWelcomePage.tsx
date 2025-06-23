@@ -2,7 +2,7 @@ import type React from 'react'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { MessageCircle, FolderOpen, GitBranch, Settings, CheckCircle, AlertCircle } from 'lucide-react'
+import { MessageCircle, FolderOpen, GitBranch, Settings, CheckCircle, AlertCircle, Sun, Moon } from 'lucide-react'
 import MetallicLogo from './MetallicLogo'
 import ParticleBackground from './ParticleBackground'
 import UniversalProjectModal from './UniversalProjectModal'
@@ -12,7 +12,7 @@ import { detectBrowserCapabilities, getBrowserName } from '../utils/browserCompa
 
 const EnhancedWelcomePage: React.FC = () => {
   const navigate = useNavigate()
-  const { createChat, state, setCurrentChatId } = useApp()
+  const { createChat, state, setCurrentChatId, toggleTheme } = useApp()
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
   const [browserCapabilities] = useState(detectBrowserCapabilities())
 
@@ -162,12 +162,18 @@ What would you like to know about this project?`)
     }
   ]
 
-  const recentChats = state.chats.slice(0, 4).map(chat => ({
-    id: chat.id,
-    name: chat.title,
-    path: `~/ai-projects/${chat.title.toLowerCase().replace(/\s+/g, '-')}`,
-    lastMessage: `${chat.messages[chat.messages.length - 1]?.text.slice(0, 50)}...` || 'No messages yet'
-  }))
+  const recentChats = state.chats.slice(0, 4).map(chat => {
+    const lastMessage = chat.messages.length > 0
+      ? chat.messages[chat.messages.length - 1].text.slice(0, 50) + '...'
+      : 'No messages yet';
+
+    return {
+      id: chat.id,
+      name: chat.title,
+      path: `~/ai-projects/${chat.title.toLowerCase().replace(/\s+/g, '-')}`,
+      lastMessage: lastMessage
+    };
+  })
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -207,10 +213,10 @@ What would you like to know about this project?`)
     <div className="min-h-screen bg-gradient-to-br from-black via-zinc-950 to-black text-white overflow-hidden relative">
       <ParticleBackground density={80} />
 
-      {/* Settings button in top-right corner */}
+      {/* Theme toggle button in top-right corner */}
       <motion.button
         className="fixed top-6 right-6 z-20 p-3 bg-gradient-to-r from-black/60 via-zinc-900/80 to-black/60 border border-yellow-500/30 rounded-lg backdrop-blur-sm hover:border-yellow-400/50 transition-all duration-300"
-        onClick={() => navigate('/settings')}
+        onClick={toggleTheme}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         initial={{ opacity: 0, y: -20 }}
@@ -220,7 +226,11 @@ What would you like to know about this project?`)
           boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,215,0,0.1)'
         }}
       >
-        <Settings size={20} className="text-amber-200/80 hover:text-yellow-300 transition-colors" />
+        {state.theme === 'dark' ? (
+          <Sun size={20} className="text-amber-200/80 hover:text-yellow-300 transition-colors" />
+        ) : (
+          <Moon size={20} className="text-blue-200/80 hover:text-blue-300 transition-colors" />
+        )}
       </motion.button>
 
       {/* Ultra-premium background effects */}

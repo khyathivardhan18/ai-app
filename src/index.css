@@ -58,6 +58,26 @@
   box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
 }
 
+/* Custom scrollbar for file tree */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(39, 39, 42, 0.5);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(63, 63, 70, 0.8);
+  border-radius: 4px;
+  border: 1px solid rgba(82, 82, 91, 0.3);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(82, 82, 91, 0.9);
+}
+
 /* Ultra-Premium animation classes */
 @keyframes luxuryFloat {
   0%, 100% {

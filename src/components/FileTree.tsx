@@ -23,6 +23,7 @@ export interface FileItem {
   content?: string
   size?: number
   lastModified?: number
+  handle?: any // For File System Access API handle
 }
 
 interface FileTreeProps {

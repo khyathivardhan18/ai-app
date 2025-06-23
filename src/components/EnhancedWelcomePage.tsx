@@ -12,13 +12,13 @@ import { detectBrowserCapabilities, getBrowserName } from '../utils/browserCompa
 
 const EnhancedWelcomePage: React.FC = () => {
   const navigate = useNavigate()
-  const { createChat, state, setCurrentChat } = useApp()
+  const { createChat, state, setCurrentChatId } = useApp()
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
   const [browserCapabilities] = useState(detectBrowserCapabilities())
 
   useEffect(() => {
-    setCurrentChat(null)
-  }, [setCurrentChat])
+    setCurrentChatId(null)
+  }, [setCurrentChatId])
 
   const handleOpenProject = () => {
     setIsProjectModalOpen(true)

@@ -40,6 +40,7 @@ interface AppContextType {
   deleteChat: (chatId: string) => void
   setCurrentChatId: (chatId: string | null) => void
   updateSettings: (settings: Partial<AppState['settings']>) => void
+  toggleTheme: () => void
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -170,6 +171,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }))
   }
 
+  const toggleTheme = () => {
+    setState(prev => ({
+      ...prev,
+      theme: prev.theme === 'dark' ? 'light' : 'dark',
+    }));
+  };
+
   const contextValue: AppContextType = {
     state,
     getChat,
@@ -178,7 +186,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     addMessage,
     deleteChat,
     setCurrentChatId,
-    updateSettings
+    updateSettings,
+    toggleTheme,
   }
 
   return (

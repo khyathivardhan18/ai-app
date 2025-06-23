@@ -1,13 +1,15 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { AppProvider } from './context/AppContext'
+import { AppProvider, useApp } from './context/AppContext'
 import EnhancedWelcomePage from './components/EnhancedWelcomePage'
 import IDELayout from './components/IDELayout'
 import SettingsPage from './components/SettingsPage'
 
-function App() {
+const AppContent: React.FC = () => {
+  const { state } = useApp()
+
   return (
-    <AppProvider>
+    <div className={state.theme}>
       <Router>
         <Routes>
           <Route path="/" element={<EnhancedWelcomePage />} />
@@ -17,6 +19,14 @@ function App() {
           <Route path="*" element={<EnhancedWelcomePage />} />
         </Routes>
       </Router>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <AppProvider>
+      <AppContent />
     </AppProvider>
   )
 }

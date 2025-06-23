@@ -9,7 +9,7 @@ import { Folder, Terminal, X, FolderOpen, ArrowLeft } from 'lucide-react';
 import FileTree, { type FileItem } from './FileTree';
 import CodeEditor from './CodeEditor';
 import TerminalPanel from './TerminalPanel';
-import ChatInterface from './ChatInterface';
+import IDEChatInterface from './IDEChatInterface';
 import BrowserCompatibilityWarning from './BrowserCompatibilityWarning';
 import { useApp } from '../context/AppContext';
 import { FileSystemManager, isFileSystemAPISupported } from '../utils/fileSystem';
@@ -471,7 +471,7 @@ const IDELayout = () => {
             </Panel>
             <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-blue-600 transition-colors" />
             <Panel defaultSize={30} minSize={20}>
-              <ChatInterface chatId={chatId!} />
+              <IDEChatInterface />
             </Panel>
           </PanelGroup>
         </div>

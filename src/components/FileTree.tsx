@@ -1,5 +1,4 @@
-import type React from 'react'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChevronRight,
@@ -128,80 +127,85 @@ const FileTree: React.FC<FileTreeProps> = ({
 
   const renderFileItem = (item: FileItem, depth = 0) => {
     const isExpanded = expandedDirs.has(item.path)
-    const Icon = getFileIcon(item.name, item.type === 'directory')
-    const color = getFileColor(item.name, item.type === 'directory')
     const isSelected = selectedFile === item.path
+    const isDirectory = item.type === 'directory'
+    const IconComponent = getFileIcon(item.name, isDirectory)
+    const fileColor = getFileColor(item.name, isDirectory)
 
     return (
-      <div key={item.path}>
+      <motion.div
+        key={item.path}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: depth * 0.05 }}
+      >
         <motion.div
-          className={`flex items-center gap-2 py-1 px-2 rounded cursor-pointer hover:bg-zinc-800/50 transition-colors ${
-            isSelected ? 'bg-blue-600/20 border-l-2 border-blue-500' : ''
+          className={`flex items-center px-3 py-2 cursor-pointer hover:bg-zinc-700/50 transition-all duration-200 rounded-md mx-2 ${
+            isSelected ? 'bg-blue-600/20 border border-blue-500/30' : ''
           }`}
-          style={{ paddingLeft: `${depth * 16 + 8}px` }}
+          style={{ paddingLeft: `${depth * 20 + 12}px` }}
           onClick={() => {
-            if (item.type === 'directory') {
+            if (isDirectory) {
               onToggleDir(item.path)
             } else {
               onFileSelect(item)
             }
           }}
-          onDoubleClick={() => {
-            if (item.type === 'file') {
-              onFileOpen(item)
-            }
+          whileHover={{ 
+            backgroundColor: 'rgba(63, 63, 70, 0.5)',
+            scale: 1.02
           }}
-          whileHover={{ x: 2 }}
           whileTap={{ scale: 0.98 }}
         >
-          {item.type === 'directory' && (
+          {/* Chevron for directories */}
+          {isDirectory && (
             <motion.div
               animate={{ rotate: isExpanded ? 90 : 0 }}
               transition={{ duration: 0.2 }}
+              className="mr-1"
             >
-              <ChevronRight size={14} className="text-gray-500" />
+              <ChevronRight size={14} className="text-gray-400" />
             </motion.div>
           )}
-
-          {item.type === 'file' && (
-            <div style={{ width: 14 }} />
-          )}
-
-          <Icon size={16} className={color} />
-
-          <span className={`text-sm ${isSelected ? 'text-white font-medium' : 'text-gray-300'} truncate`}>
+          
+          {/* File/Directory icon */}
+          <IconComponent size={16} className={`mr-2 ${fileColor}`} />
+          
+          {/* File name */}
+          <span className={`text-sm truncate flex-1 ${isSelected ? 'text-blue-300 font-medium' : 'text-gray-300'}`}>
             {item.name}
           </span>
-
-          {item.type === 'file' && item.size && (
-            <span className="text-xs text-gray-500 ml-auto">
+          
+          {/* File size for files */}
+          {!isDirectory && item.size && (
+            <span className="text-xs text-gray-500 ml-2">
               {formatFileSize(item.size)}
             </span>
           )}
         </motion.div>
 
-        <AnimatePresence>
-          {item.type === 'directory' && isExpanded && item.children && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              style={{ overflow: 'hidden' }}
-            >
-              {item.children
-                .sort((a, b) => {
-                  // Directories first, then files, both alphabetically
-                  if (a.type !== b.type) {
-                    return a.type === 'directory' ? -1 : 1
-                  }
-                  return a.name.localeCompare(b.name)
-                })
-                .map(child => renderFileItem(child, depth + 1))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+        {/* Directory children with smooth dropdown animation */}
+        {isDirectory && (
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, y: -10 }}
+                animate={{ opacity: 1, height: 'auto', y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -10 }}
+                transition={{ 
+                  duration: 0.3,
+                  ease: "easeInOut"
+                }}
+                className="overflow-hidden"
+              >
+                <div className="border-l border-zinc-700/50 ml-4">
+                  {item.children?.map(child => renderFileItem(child, depth + 1))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
+      </motion.div>
     )
   }
 
@@ -214,22 +218,47 @@ const FileTree: React.FC<FileTreeProps> = ({
   }
 
   return (
-    <div className="h-full overflow-y-auto">
-      {files.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-32 text-gray-500">
-          <Folder size={32} className="mb-2 opacity-50" />
-          <span className="text-sm">No files to display</span>
+    <div className="h-full flex flex-col bg-zinc-900 border-r border-zinc-700">
+      {/* Header */}
+      <div className="p-3 border-b border-zinc-700 bg-zinc-800/50">
+        <h3 className="text-sm font-medium text-gray-300 flex items-center gap-2">
+          <Folder size={16} className="text-blue-400" />
+          Project Files
+        </h3>
+      </div>
+      
+      {/* File tree with scrollbar */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="py-2">
+          {files.length === 0 ? (
+            <motion.div
+              className="text-center py-12 text-gray-500"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <Folder size={48} className="mx-auto mb-3 opacity-50" />
+              <p className="text-sm font-medium mb-1">No files loaded</p>
+              <p className="text-xs">Open a project to get started</p>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              {files.map(item => renderFileItem(item))}
+            </motion.div>
+          )}
         </div>
-      ) : (
-        <div className="space-y-1 p-2">
-          {files
-            .sort((a, b) => {
-              if (a.type !== b.type) {
-                return a.type === 'directory' ? -1 : 1
-              }
-              return a.name.localeCompare(b.name)
-            })
-            .map(item => renderFileItem(item))}
+      </div>
+      
+      {/* Footer with file count */}
+      {files.length > 0 && (
+        <div className="p-2 border-t border-zinc-700 bg-zinc-800/50">
+          <p className="text-xs text-gray-500 text-center">
+            {files.length} item{files.length !== 1 ? 's' : ''}
+          </p>
         </div>
       )}
     </div>

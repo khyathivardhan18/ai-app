@@ -1,376 +1,70 @@
-import type React from 'react'
-import { useState, useRef, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { Send, ArrowLeft, Bot, User, Loader2, Copy, Check, FileText, Folder, Hash, Zap } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Send, ArrowLeft, Settings, Sun, Moon } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { geminiService } from '../services/gemini'
+import MetallicLogo from './MetallicLogo'
 import ParticleBackground from './ParticleBackground'
-import InlineEdit from './InlineEdit'
-import AgentMode from './AgentMode'
 
-interface MessageComponentProps {
-  message: {
-    id: string
-    text: string
-    sender: 'user' | 'ai'
-    timestamp: Date
-    context?: string[]
-  }
-  isStreaming?: boolean
-}
-
-interface ChatMode {
-  id: 'ask' | 'agent'
-  name: string
-  shortcut: string
-  icon: React.ElementType
-  description: string
-}
-
-const MessageComponent: React.FC<MessageComponentProps> = ({ message, isStreaming = false }) => {
-  const [copied, setCopied] = useState(false)
-
-  const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(message.text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`flex gap-3 p-4 rounded-lg ${
-        message.sender === 'user'
-          ? 'bg-blue-600/20 border border-blue-500/30 ml-12'
-          : 'bg-slate-800/50 border border-slate-700/50 mr-12'
-      }`}
-    >
-      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-        message.sender === 'user' ? 'bg-blue-600' : 'bg-slate-700'
-      }`}>
-        {message.sender === 'user' ?
-          <User size={16} className="text-white" /> :
-          <Bot size={16} className="text-blue-400" />
-        }
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-sm font-medium text-slate-300">
-            {message.sender === 'user' ? 'You' : 'Edith AI'}
-          </span>
-          <span className="text-xs text-slate-500">
-            {message.timestamp.toLocaleTimeString()}
-          </span>
-          {message.context && message.context.length > 0 && (
-            <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded">
-              {message.context.length} references
-            </span>
-          )}
-        </div>
-
-        {message.context && message.context.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-1">
-            {message.context.map((ref) => (
-              <span key={ref} className="text-xs bg-zinc-700/50 text-zinc-300 px-2 py-1 rounded">
-                @{ref}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div className="text-slate-200 whitespace-pre-wrap break-words">
-          {message.text}
-          {isStreaming && (
-            <motion.span
-              animate={{ opacity: [1, 0] }}
-              transition={{ duration: 0.8, repeat: Number.POSITIVE_INFINITY }}
-              className="inline-block w-2 h-5 bg-blue-400 ml-1"
-            />
-          )}
-        </div>
-
-        {message.sender === 'ai' && (
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={copyToClipboard}
-            className="mt-2 p-1 text-slate-500 hover:text-slate-300 transition-colors"
-          >
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-          </motion.button>
-        )}
-      </div>
-    </motion.div>
-  )
-}
-
-interface ChatInterfaceProps {
-  chatId: string;
-}
-
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ chatId }) => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { state, addMessage, setCurrentChatId, createChat } = useApp();
-  const [input, setInput] = useState('')
+const ChatInterface: React.FC = () => {
+  const { chatId } = useParams<{ chatId: string }>()
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const { state, addMessage, toggleTheme } = useApp()
+  const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [streamingMessage, setStreamingMessage] = useState('')
-  const [isStreaming, setIsStreaming] = useState(false)
-  const [currentMode, setCurrentMode] = useState<'ask' | 'agent'>('ask')
-  const [isInlineEditOpen, setIsInlineEditOpen] = useState(false)
-  const [isAgentModeOpen, setIsAgentModeOpen] = useState(false)
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const [cursorPosition, setCursorPosition] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  const currentChat = state.chats.find(chat => chat.id === chatId)
-
-  const modes: ChatMode[] = [
-    {
-      id: 'ask',
-      name: 'Ask',
-      shortcut: '⌘T',
-      icon: Hash,
-      description: 'Conversational help with automatic context'
-    },
-    {
-      id: 'agent',
-      name: 'Agent',
-      shortcut: '⌘I',
-      icon: Bot,
-      description: 'Multi-file edits with diff preview'
-    }
-  ]
-
-  // Get project-specific suggestions if available
-  const getProjectSuggestions = () => {
-    const projectId = currentChat?.title.includes('Project:')
-      ? currentChat.title.replace('Project: ', '').toLowerCase().replace(/\s+/g, '_')
-      : null
-
-    if (projectId) {
-      // Try to find stored project data
-      const storedProjectData = sessionStorage.getItem(`project_upload_${Date.now()}`) ||
-                               sessionStorage.getItem(`project_fs_${Date.now()}`)
-
-      if (storedProjectData) {
-        try {
-          const projectData = JSON.parse(storedProjectData)
-          return Object.keys(projectData.files || {}).slice(0, 10).map(filePath => ({
-            type: 'file',
-            name: filePath.split('/').pop() || filePath,
-            icon: FileText
-          }))
-        } catch (error) {
-          console.error('Error parsing project suggestions:', error)
-        }
-      }
-    }
-
-    // Default suggestions
-    return [
-      { type: 'file', name: 'App.tsx', icon: FileText },
-      { type: 'file', name: 'components/', icon: Folder },
-      { type: 'file', name: 'utils/api.ts', icon: FileText },
-      { type: 'symbol', name: 'useState', icon: Hash },
-      { type: 'symbol', name: 'useEffect', icon: Hash },
-      { type: 'folder', name: 'src/', icon: Folder },
-    ]
-  }
-
-  const suggestions = getProjectSuggestions()
+  const chat = state.chats.find(c => c.id === chatId)
+  const initialPrompt = searchParams.get('prompt')
 
   useEffect(() => {
-    if (chatId) {
-      setCurrentChatId(chatId)
+    if (initialPrompt && chat && chat.messages.length === 0) {
+      // Auto-send initial prompt
+      handleSendMessage(decodeURIComponent(initialPrompt))
     }
-  }, [chatId, setCurrentChatId])
+  }, [initialPrompt, chat])
 
   useEffect(() => {
+    scrollToBottom()
+  }, [chat?.messages])
+
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [currentChat?.messages.length, isStreaming])
-
-  useEffect(() => {
-    if (state.apiKey && !geminiService.isInitialized()) {
-      geminiService.initializeAPI(state.apiKey)
-    }
-  }, [state.apiKey])
-
-  // Global keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey)) {
-        switch (e.key) {
-          case 'k':
-            e.preventDefault()
-            setIsInlineEditOpen(true)
-            break
-          case 'i':
-            e.preventDefault()
-            if (currentMode === 'ask') {
-              setCurrentMode('agent')
-            } else {
-              setIsAgentModeOpen(true)
-            }
-            break
-          case 't':
-            e.preventDefault()
-            setCurrentMode('ask')
-            inputRef.current?.focus()
-            break
-        }
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [currentMode])
-
-  // Handle input changes and @-symbol detection
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value
-    const position = e.target.selectionStart
-
-    setInput(value)
-    setCursorPosition(position)
-
-    // Check for @-symbol trigger
-    const beforeCursor = value.slice(0, position)
-    const atIndex = beforeCursor.lastIndexOf('@')
-
-    if (atIndex !== -1 && atIndex === position - 1) {
-      setShowSuggestions(true)
-    } else if (atIndex !== -1 && !/\s/.test(beforeCursor.slice(atIndex + 1))) {
-      setShowSuggestions(true)
-    } else {
-      setShowSuggestions(false)
-    }
   }
 
-  // Extract @-references from input
-  const extractReferences = (text: string): string[] => {
-    const regex = /@(\w+(?:\/\w+)*(?:\.\w+)?)/g
-    const matches = text.match(regex)
-    return matches ? matches.map(match => match.slice(1)) : []
-  }
-
-  // Handle initial prompt from Quick Actions
-  useEffect(() => {
-    const prompt = searchParams.get('prompt')
-    if (prompt && chatId && currentChat && currentChat.messages.length === 0 && !isLoading) {
-      handleQuickActionPrompt(prompt)
-      navigate(`/chat/${chatId}`, { replace: true })
-    }
-  }, [searchParams, chatId, currentChat, isLoading, navigate])
-
-  const handleQuickActionPrompt = async (prompt: string) => {
-    if (!state.apiKey || !chatId) return
+  const handleSendMessage = async (message: string = inputValue) => {
+    if (!message.trim() || !chatId) return
 
     setIsLoading(true)
-
-    const references = extractReferences(prompt)
-    addMessage(chatId, {
-      text: prompt,
-      sender: 'user',
-      timestamp: new Date(),
-      context: references
-    })
+    setInputValue('')
 
     try {
+      // Add user message
+      addMessage(chatId, {
+        text: message,
+        sender: 'user',
+        timestamp: new Date()
+      })
+
+      // Initialize Gemini service if not already done
       if (!geminiService.isInitialized()) {
         geminiService.initializeAPI(state.apiKey)
       }
 
-      setIsStreaming(true)
-      setStreamingMessage('')
-
-      let fullResponse = ''
-      for await (const chunk of geminiService.streamMessage(prompt, [])) {
-        fullResponse += chunk
-        setStreamingMessage(fullResponse)
-      }
-
-      setIsStreaming(false)
-      setStreamingMessage('')
-
+      // Get AI response using Gemini
+      const response = await geminiService.sendMessage(message)
+      
       addMessage(chatId, {
-        text: fullResponse,
+        text: response,
         sender: 'ai',
         timestamp: new Date()
       })
-
-    } catch (error: unknown) {
-      console.error('Chat error:', error)
-      setIsStreaming(false)
-      setStreamingMessage('')
-
-      addMessage(chatId, {
-        text: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-        sender: 'ai',
-        timestamp: new Date()
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading || !chatId) return
-
-    const userMessage = input.trim()
-    const references = extractReferences(userMessage)
-    setInput('')
-    setIsLoading(true)
-
-    addMessage(chatId, {
-      text: userMessage,
-      sender: 'user',
-      timestamp: new Date(),
-      context: references
-    })
-
-    try {
-      if (!geminiService.isInitialized()) {
-        geminiService.initializeAPI(state.apiKey)
-      }
-
-      const history = currentChat?.messages.map(msg => ({
-        role: msg.sender,
-        parts: msg.text
-      })) || []
-
-      setIsStreaming(true)
-      setStreamingMessage('')
-
-      let contextPrompt = userMessage
-      if (references.length > 0) {
-        contextPrompt = `Context: Referenced files/symbols: ${references.join(', ')}\n\nUser message: ${userMessage}`
-      }
-
-      let fullResponse = ''
-      for await (const chunk of geminiService.streamMessage(contextPrompt, history)) {
-        fullResponse += chunk
-        setStreamingMessage(fullResponse)
-      }
-
-      setIsStreaming(false)
-      setStreamingMessage('')
-
-      addMessage(chatId, {
-        text: fullResponse,
-        sender: 'ai',
-        timestamp: new Date()
-      })
-
-    } catch (error: unknown) {
-      console.error('Chat error:', error)
-      setIsStreaming(false)
-      setStreamingMessage('')
-
+    } catch (error) {
+      console.error('Error sending message:', error)
+      
+      // Add error message
       addMessage(chatId, {
         text: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
         sender: 'ai',
@@ -384,46 +78,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ chatId }) => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      sendMessage()
+      handleSendMessage()
     }
   }
 
-  const handleInlineEdit = (instruction: string, mode: 'edit' | 'generate' | 'terminal') => {
-    const chatId = createChat(`Inline ${mode}: ${instruction.slice(0, 30)}...`)
-    navigate(`/chat/${chatId}?prompt=${encodeURIComponent(`Inline ${mode} request: ${instruction}`)}`)
-  }
-
-  const handleAgentComplete = (task: { id: string; description: string; status: string }) => {
-    console.log('Agent task completed:', task)
-    // Handle agent task completion
-  }
-
-  const insertSuggestion = (suggestion: { name: string; type: string }) => {
-    const beforeCursor = input.slice(0, cursorPosition)
-    const afterCursor = input.slice(cursorPosition)
-    const atIndex = beforeCursor.lastIndexOf('@')
-
-    const newInput = `${beforeCursor.slice(0, atIndex + 1)}${suggestion.name} ${afterCursor}`
-    setInput(newInput)
-    setShowSuggestions(false)
-
-    setTimeout(() => {
-      if (inputRef.current) {
-        const newPosition = atIndex + suggestion.name.length + 2
-        inputRef.current.setSelectionRange(newPosition, newPosition)
-        inputRef.current.focus()
-      }
-    }, 0)
-  }
-
-  if (!currentChat) {
+  if (!chat) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background text-foreground flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Chat not found</h2>
           <button
             onClick={() => navigate('/')}
-            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
           >
             Go Home
           </button>
@@ -433,204 +99,181 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ chatId }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white">
-      <ParticleBackground density={30} />
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background text-foreground overflow-hidden relative">
+      <ParticleBackground density={60} />
 
       {/* Header */}
-      <motion.header
-        className="relative z-10 border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-sm"
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
+      <motion.div
+        className="fixed top-0 left-0 right-0 z-20 bg-gradient-to-r from-background/90 via-background/95 to-background/90 border-b border-primary/20 backdrop-blur-md"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
       >
-        <div className="max-w-4xl mx-auto px-4 py-3">
+        <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-4">
             <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => navigate(-1)}
-              className="p-2 text-slate-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft size={20} />
-            </motion.button>
-
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-semibold">{currentChat.title}</h1>
-                {currentChat.title.includes('Project:') && (
-                  <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded border border-green-500/30">
-                    File System
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-slate-400">
-                {currentChat.messages.length} messages • {modes.find(m => m.id === currentMode)?.name} Mode
-              </p>
-            </div>
-
-            {/* Mode Toggle */}
-            <div className="flex bg-slate-800/50 rounded-lg p-1">
-              {modes.map((mode) => (
-                <button
-                  key={mode.id}
-                  onClick={() => setCurrentMode(mode.id)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-all ${
-                    currentMode === mode.id
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-400 hover:text-slate-300'
-                  }`}
-                  title={`${mode.description} (${mode.shortcut})`}
-                >
-                  <mode.icon size={14} />
-                  {mode.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          </div>
-
-          {/* Quick Actions */}
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={() => setIsInlineEditOpen(true)}
-              className="flex items-center gap-1 px-2 py-1 bg-slate-800/50 hover:bg-slate-700/50 rounded text-xs text-slate-400 hover:text-slate-300 transition-colors"
-            >
-              <Zap size={12} />
-              Inline Edit (⌘K)
-            </button>
-            <button
-              onClick={() => setIsAgentModeOpen(true)}
-              className="flex items-center gap-1 px-2 py-1 bg-slate-800/50 hover:bg-slate-700/50 rounded text-xs text-slate-400 hover:text-slate-300 transition-colors"
-            >
-              <Bot size={12} />
-              Agent Mode (⌘I)
-            </button>
-          </div>
-        </div>
-      </motion.header>
-
-      {/* Messages */}
-      <div className="relative z-10 max-w-4xl mx-auto px-4 py-6 min-h-[calc(100vh-140px)] flex flex-col">
-        <div className="flex-1 space-y-4 mb-6">
-          <AnimatePresence>
-            {currentChat.messages.map((message) => (
-              <MessageComponent key={message.id} message={message} />
-            ))}
-          </AnimatePresence>
-
-          {/* Streaming message */}
-          {isStreaming && streamingMessage && (
-            <MessageComponent
-              message={{
-                id: 'streaming',
-                text: streamingMessage,
-                sender: 'ai',
-                timestamp: new Date()
-              }}
-              isStreaming={true}
-            />
-          )}
-
-          {/* Loading indicator */}
-          {isLoading && !isStreaming && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex gap-3 p-4"
-            >
-              <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
-                <Bot size={16} className="text-blue-400" />
-              </div>
-              <div className="flex items-center gap-2 text-slate-400">
-                <Loader2 size={16} className="animate-spin" />
-                <span>Edith is thinking...</span>
-              </div>
-            </motion.div>
-          )}
-        </div>
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <motion.div
-        className="relative z-10 border-t border-slate-700/50 bg-slate-900/80 backdrop-blur-sm"
-        initial={{ y: 50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-      >
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          {/* @-symbol suggestions */}
-          {showSuggestions && (
-            <div className="mb-3 bg-zinc-800 border border-zinc-700 rounded-lg p-2 max-h-32 overflow-y-auto">
-              <div className="text-xs text-zinc-400 mb-2">Reference files and symbols</div>
-              {suggestions.map((suggestion) => (
-                <button
-                  key={`${suggestion.name}-${suggestion.type}`}
-                  onClick={() => insertSuggestion(suggestion)}
-                  className="w-full flex items-center gap-2 p-2 hover:bg-zinc-700 rounded text-sm text-left"
-                >
-                  <suggestion.icon size={14} className="text-zinc-400" />
-                  <span className="text-white">{suggestion.name}</span>
-                  <span className="text-xs text-zinc-500 ml-auto">{suggestion.type}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="flex gap-3 items-end">
-            <div className="flex-1 relative">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={handleInputChange}
-                onKeyPress={handleKeyPress}
-                placeholder="Message Edith AI... Use @ to reference files"
-                disabled={isLoading}
-                className="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-3 text-white placeholder-slate-400 resize-none focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                rows={1}
-                style={{ minHeight: '44px', maxHeight: '120px' }}
-              />
-            </div>
-
-            <motion.button
+              onClick={() => navigate('/')}
+              className="p-2 rounded-lg bg-background/50 border border-primary/20 hover:border-primary/40 transition-all duration-300"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={sendMessage}
-              disabled={!input.trim() || isLoading}
-              className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isLoading ? (
-                <Loader2 size={20} className="animate-spin" />
-              ) : (
-                <Send size={20} />
-              )}
+              <ArrowLeft size={20} className="text-foreground" />
             </motion.button>
+            
+            <div className="flex items-center gap-3">
+              <MetallicLogo size={32} />
+              <div>
+                <h1 className="text-lg font-semibold text-foreground">{chat.title || 'New Chat'}</h1>
+                <p className="text-sm text-muted-foreground">AI Assistant</p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
-            <div>
-              {currentMode === 'agent' ? 'Agent mode • Multi-file editing' : 'Ask mode • Conversational help'}
-            </div>
-            <div>
-              ⌘K for inline edit • ⌘I for agent mode
-            </div>
+          <div className="flex items-center gap-2">
+            <motion.button
+              onClick={() => navigate('/settings')}
+              className="p-2 rounded-lg bg-background/50 border border-primary/20 hover:border-primary/40 transition-all duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Settings size={20} className="text-foreground" />
+            </motion.button>
+            
+            <motion.button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg bg-background/50 border border-primary/20 hover:border-primary/40 transition-all duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {state.theme === 'dark' ? (
+                <Sun size={20} className="text-amber-200" />
+              ) : (
+                <Moon size={20} className="text-blue-200" />
+              )}
+            </motion.button>
           </div>
         </div>
       </motion.div>
 
-      {/* Modals */}
-      <InlineEdit
-        isOpen={isInlineEditOpen}
-        onClose={() => setIsInlineEditOpen(false)}
-        onSubmit={handleInlineEdit}
-      />
+      {/* Messages Container */}
+      <div className="pt-24 pb-32 px-4 max-w-4xl mx-auto">
+        <div className="space-y-6">
+          {chat.messages.length === 0 && !initialPrompt && (
+            <motion.div
+              className="text-center py-12"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="mb-6">
+                <MetallicLogo size={80} />
+              </div>
+              <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-yellow-200 to-amber-200 bg-clip-text text-transparent">
+                Welcome to Edith AI
+              </h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                I'm your AI development assistant. Ask me anything about coding, debugging, or project development.
+              </p>
+            </motion.div>
+          )}
 
-      <AgentMode
-        isOpen={isAgentModeOpen}
-        onClose={() => setIsAgentModeOpen(false)}
-        onComplete={handleAgentComplete}
-        projectPath={currentChat.title.includes('Project:') ? currentChat.title : undefined}
-      />
+          {chat.messages.map((message, index) => (
+            <motion.div
+              key={message.id}
+              className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+            >
+              <div
+                className={`max-w-[80%] rounded-2xl p-4 ${
+                  message.sender === 'user'
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white'
+                    : 'bg-gradient-to-r from-background/80 to-background/60 border border-primary/20 text-foreground'
+                } backdrop-blur-sm`}
+                style={{
+                  boxShadow: message.sender === 'user' 
+                    ? '0 8px 32px rgba(59, 130, 246, 0.3)' 
+                    : '0 8px 32px rgba(0, 0, 0, 0.2)'
+                }}
+              >
+                <div className="whitespace-pre-wrap leading-relaxed">
+                  {message.text}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+
+          {isLoading && (
+            <motion.div
+              className="flex justify-start"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="max-w-[80%] rounded-2xl p-4 bg-gradient-to-r from-background/80 to-background/60 border border-primary/20 backdrop-blur-sm">
+                <div className="flex items-center gap-2">
+                  <div className="flex space-x-1">
+                    <motion.div
+                      className="w-2 h-2 bg-primary rounded-full"
+                      animate={{ scale: [1, 1.5, 1] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+                    />
+                    <motion.div
+                      className="w-2 h-2 bg-primary rounded-full"
+                      animate={{ scale: [1, 1.5, 1] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
+                    />
+                    <motion.div
+                      className="w-2 h-2 bg-primary rounded-full"
+                      animate={{ scale: [1, 1.5, 1] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
+                    />
+                  </div>
+                  <span className="text-sm text-muted-foreground">Edith is thinking...</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Container */}
+      <motion.div
+        className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-r from-background/90 via-background/95 to-background/90 border-t border-primary/20 backdrop-blur-md"
+        initial={{ y: 100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="max-w-4xl mx-auto p-4">
+          <div className="flex gap-4">
+            <div className="flex-1 relative">
+              <textarea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Ask Edith anything about coding, debugging, or development..."
+                className="w-full p-4 pr-12 bg-background/50 border border-primary/20 rounded-xl resize-none focus:border-primary/40 focus:outline-none transition-all duration-300 backdrop-blur-sm"
+                rows={1}
+                style={{
+                  minHeight: '56px',
+                  maxHeight: '200px'
+                }}
+                disabled={isLoading}
+              />
+              <motion.button
+                onClick={() => handleSendMessage()}
+                disabled={!inputValue.trim() || isLoading}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:from-blue-700 hover:to-cyan-700 transition-all duration-300"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Send size={20} />
+              </motion.button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
     </div>
   )
 }

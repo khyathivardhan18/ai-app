@@ -385,16 +385,17 @@ const IDELayout = () => {
 
           <PanelGroup direction="horizontal" className="flex-grow">
             <Panel defaultSize={20} minSize={15}>
-              <div className="p-2 border-b border-zinc-800">
-                <button
-                  onClick={handleOpenProject}
-                  className="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-zinc-800"
-                >
-                  <FolderOpen size={16} />
-                  {isFileSystemAPISupported() ? 'Open Project' : 'Load Demo Project'}
-                </button>
-              </div>
-              
+              {projectFiles.length === 0 && (
+                <div className="p-2 border-b border-zinc-800">
+                  <button
+                    onClick={handleOpenProject}
+                    className="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-zinc-800"
+                  >
+                    <FolderOpen size={16} />
+                    {isFileSystemAPISupported() ? 'Open Project' : 'Load Demo Project'}
+                  </button>
+                </div>
+              )}
               <FileTree
                 files={projectFiles}
                 onFileSelect={handleFileOpen}
@@ -409,6 +410,7 @@ const IDELayout = () => {
                     return newSet;
                   })
                 }
+                projectName={projectName}
               />
             </Panel>
             <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-blue-600 transition-colors" />

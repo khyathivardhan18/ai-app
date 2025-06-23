@@ -1,5 +1,5 @@
 {
-  "name": "gemini-ai-app",
+  "name": "edith-ai-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,13 +14,15 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "core-js": "^3.43.0",
     "framer-motion": "^12.18.1",
     "lucide-react": "^0.522.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-resizable-panels": "^3.0.3",
     "react-router-dom": "^7.6.2",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "whatwg-fetch": "^3.6.20"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
@@ -48,5 +50,11 @@
     "typescript": "~5.6.3",
     "typescript-eslint": "^8.32.1",
     "vite": "^6.3.5"
-  }
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ]
 }

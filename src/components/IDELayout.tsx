@@ -10,7 +10,9 @@ import FileTree, { type FileItem } from './FileTree';
 import CodeEditor from './CodeEditor';
 import TerminalPanel from './TerminalPanel';
 import ChatInterface from './ChatInterface';
+import BrowserCompatibilityWarning from './BrowserCompatibilityWarning';
 import { useApp } from '../context/AppContext';
+import { FileSystemManager, isFileSystemAPISupported } from '../utils/fileSystem';
 
 // This is the new, functional IDELayout component.
 const IDELayout = () => {
@@ -23,6 +25,8 @@ const IDELayout = () => {
   const [activeTabPath, setActiveTabPath] = useState<string | null>(null);
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
   const [showTerminal, setShowTerminal] = useState(true);
+  const [showBrowserWarning, setShowBrowserWarning] = useState(true);
+  const [projectName, setProjectName] = useState<string>('');
 
   // Effect to load the current chat session
   useEffect(() => {
@@ -37,45 +41,43 @@ const IDELayout = () => {
     }
   }, [chatId, getChat, navigate]);
 
+  // Auto-load demo project for unsupported browsers
+  useEffect(() => {
+    if (!isFileSystemAPISupported() && projectFiles.length === 0) {
+      handleOpenProject();
+    }
+  }, [projectFiles.length]);
 
   // Handler for the "Open Project" button inside the IDE
   const handleOpenProject = async () => {
     try {
-      const dirHandle = await (window as any).showDirectoryPicker();
-      await dirHandle.requestPermission({ mode: 'readwrite' });
-      const files = await buildFileTree(dirHandle);
-      setProjectFiles(files);
-      // Automatically expand root directories
-      const rootDirs = files.filter(f => f.type === 'directory').map(f => f.path);
-      setExpandedDirs(new Set(rootDirs));
+      const fileSystemManager = FileSystemManager.getInstance();
+      const project = await fileSystemManager.openProject();
+      
+      if (project) {
+        setProjectFiles(project.files);
+        setProjectName(project.name);
+        
+        // Automatically expand root directories
+        const rootDirs = project.files.filter(f => f.type === 'directory').map(f => f.path);
+        setExpandedDirs(new Set(rootDirs));
+        
+        // Auto-open first file if it's a demo project
+        if (project.name === 'Demo Project' && project.files.length > 0) {
+          const firstFile = project.files.find(f => f.type === 'file');
+          if (firstFile) {
+            handleFileOpen(firstFile);
+          }
+        }
+      }
     } catch (error) {
       console.error('Error opening project:', error);
-      alert('Could not open project. Please ensure your browser supports the File System Access API and that you have granted permissions.');
+      alert('Could not open project. Please try again.');
     }
   };
 
-  // Helper to recursively build the file tree from the directory handle
-  async function buildFileTree(directoryHandle: any, path = ''): Promise<FileItem[]> {
-    const files: FileItem[] = [];
-    for await (const handle of directoryHandle.values()) {
-      const newPath = path ? `${path}/${handle.name}` : handle.name;
-      if (handle.kind === 'file') {
-        files.push({ name: handle.name, path: newPath, type: 'file', handle });
-      } else if (handle.kind === 'directory') {
-        files.push({
-          name: handle.name,
-          path: newPath,
-          type: 'directory',
-          children: await buildFileTree(handle, newPath),
-          handle,
-        });
-      }
-    }
-    return files;
-  }
-
   const handleFileOpen = async (file: FileItem) => {
-    if (file.type !== 'file' || !file.handle) return;
+    if (file.type !== 'file') return;
   
     const isAlreadyOpen = openTabs.some(tab => tab.path === file.path);
     if (isAlreadyOpen) {
@@ -84,12 +86,102 @@ const IDELayout = () => {
     }
   
     try {
-      const fileHandle = file.handle as any;
-      const fileData = await fileHandle.getFile();
-      const content = await fileData.text();
-      const language = file.name.split('.').pop() || 'typescript';
+      let content = file.content;
+      let language = 'text';
+      
+      // If content is not loaded, try to get it from the file system
+      if (!content) {
+        const fileSystemManager = FileSystemManager.getInstance();
+        content = await fileSystemManager.getFileContent(file.path) || '';
+      }
+      
+      // Determine language from file extension
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      switch (ext) {
+        case 'js':
+        case 'jsx':
+        case 'ts':
+        case 'tsx':
+          language = 'javascript';
+          break;
+        case 'html':
+          language = 'html';
+          break;
+        case 'css':
+          language = 'css';
+          break;
+        case 'json':
+          language = 'json';
+          break;
+        case 'md':
+          language = 'markdown';
+          break;
+        case 'py':
+          language = 'python';
+          break;
+        case 'java':
+          language = 'java';
+          break;
+        case 'cpp':
+        case 'cc':
+        case 'cxx':
+          language = 'cpp';
+          break;
+        case 'c':
+          language = 'c';
+          break;
+        case 'php':
+          language = 'php';
+          break;
+        case 'rb':
+          language = 'ruby';
+          break;
+        case 'go':
+          language = 'go';
+          break;
+        case 'rs':
+          language = 'rust';
+          break;
+        case 'swift':
+          language = 'swift';
+          break;
+        case 'kt':
+          language = 'kotlin';
+          break;
+        case 'scala':
+          language = 'scala';
+          break;
+        case 'sh':
+        case 'bash':
+          language = 'bash';
+          break;
+        case 'sql':
+          language = 'sql';
+          break;
+        case 'xml':
+          language = 'xml';
+          break;
+        case 'yaml':
+        case 'yml':
+          language = 'yaml';
+          break;
+        case 'toml':
+          language = 'toml';
+          break;
+        case 'ini':
+          language = 'ini';
+          break;
+        default:
+          language = 'text';
+      }
   
-      setOpenTabs([...openTabs, { path: file.path, name: file.name, content, language, handle: fileHandle }]);
+      setOpenTabs([...openTabs, { 
+        path: file.path, 
+        name: file.name, 
+        content: content || '', 
+        language, 
+        handle: file.handle 
+      }]);
       setActiveTabPath(file.path);
     } catch (error) {
       console.error("Error opening file:", error);
@@ -114,16 +206,21 @@ const IDELayout = () => {
 
   const handleSave = async (path: string) => {
     const tab = openTabs.find(tab => tab.path === path);
-    if (tab && tab.isDirty && tab.handle) {
+    if (tab && tab.isDirty) {
       try {
-        const writable = await (tab.handle as any).createWritable();
-        await writable.write(tab.content);
-        await writable.close();
-        setOpenTabs(tabs =>
-          tabs.map(t => (t.path === path ? { ...t, isDirty: false } : t))
-        );
+        const fileSystemManager = FileSystemManager.getInstance();
+        const success = await fileSystemManager.saveFileContent(path, tab.content);
+        
+        if (success) {
+          setOpenTabs(tabs =>
+            tabs.map(t => (t.path === path ? { ...t, isDirty: false } : t))
+          );
+        } else {
+          alert('Failed to save file. This might be because you\'re using a browser that doesn\'t support file saving.');
+        }
       } catch (error) {
         console.error('Error saving file:', error);
+        alert('Error saving file. Please try again.');
       }
     }
   };
@@ -138,6 +235,9 @@ const IDELayout = () => {
             <ArrowLeft size={16} />
           </button>
           <span>Edith AI IDE</span>
+          {projectName && (
+            <span className="text-zinc-400">- {projectName}</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -158,9 +258,18 @@ const IDELayout = () => {
               className="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-zinc-800"
             >
               <FolderOpen size={16} />
-              Open Project
+              {isFileSystemAPISupported() ? 'Open Project' : 'Load Demo Project'}
             </button>
           </div>
+          
+          {showBrowserWarning && (
+            <div className="p-2">
+              <BrowserCompatibilityWarning 
+                onDismiss={() => setShowBrowserWarning(false)}
+              />
+            </div>
+          )}
+          
           <FileTree
             files={projectFiles}
             onFileSelect={handleFileOpen}
@@ -204,38 +313,40 @@ const IDELayout = () => {
                     </div>
                   ))}
                 </div>
-                <PanelGroup direction="horizontal" className="flex-grow">
-                  <Panel defaultSize={60}>
-                    {activeTab ? (
-                      <CodeEditor
-                        filename={activeTab.name}
-                        content={activeTab.content}
-                        language={activeTab.language}
-                        onChange={(newContent) => handleContentChange(activeTab.path, newContent)}
-                        onSave={() => handleSave(activeTab.path)}
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-zinc-500">
-                         {projectFiles.length === 0 ? "Click 'Open Project' to start" : "Select a file to open"}
+                <div className="flex-1">
+                  {activeTab ? (
+                    <CodeEditor
+                      content={activeTab.content}
+                      language={activeTab.language}
+                      filename={activeTab.name}
+                      onChange={(value) => handleContentChange(activeTab.path, value)}
+                      onSave={() => handleSave(activeTab.path)}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-zinc-500">
+                      <div className="text-center">
+                        <Folder className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No file selected</p>
+                        <p className="text-sm">Open a file from the file tree to start editing</p>
                       </div>
-                    )}
-                  </Panel>
-                  <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-blue-600 transition-colors" />
-                  <Panel defaultSize={40}>
-                    {chatId ? <ChatInterface chatId={chatId} /> : <div className="p-4">No chat selected.</div>}
-                  </Panel>
-                </PanelGroup>
+                    </div>
+                  )}
+                </div>
               </div>
             </Panel>
             {showTerminal && (
               <>
                 <PanelResizeHandle className="h-1 bg-zinc-800 hover:bg-blue-600 transition-colors" />
-                <Panel defaultSize={30} minSize={10}>
+                <Panel defaultSize={25} minSize={15}>
                   <TerminalPanel onClose={() => setShowTerminal(false)} />
                 </Panel>
               </>
             )}
           </PanelGroup>
+        </Panel>
+        <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-blue-600 transition-colors" />
+        <Panel defaultSize={30} minSize={20}>
+          <ChatInterface chatId={chatId!} />
         </Panel>
       </PanelGroup>
     </div>

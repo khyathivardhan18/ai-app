@@ -32,6 +32,7 @@ interface FileTreeProps {
   selectedFile?: string
   expandedDirs: Set<string>
   onToggleDir: (path: string) => void
+  projectName?: string
 }
 
 const FileTree: React.FC<FileTreeProps> = ({
@@ -40,7 +41,8 @@ const FileTree: React.FC<FileTreeProps> = ({
   onFileOpen,
   selectedFile,
   expandedDirs,
-  onToggleDir
+  onToggleDir,
+  projectName
 }) => {
   const getFileIcon = (fileName: string, isDirectory: boolean) => {
     if (isDirectory) {
@@ -223,7 +225,7 @@ const FileTree: React.FC<FileTreeProps> = ({
       <div className="p-3 border-b border-zinc-700 bg-zinc-800/50">
         <h3 className="text-sm font-medium text-gray-300 flex items-center gap-2">
           <Folder size={16} className="text-blue-400" />
-          Project Files
+          {projectName ? projectName : 'Project Files'}
         </h3>
       </div>
       

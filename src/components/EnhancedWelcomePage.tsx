@@ -132,7 +132,7 @@ What would you like to know about this project?`)
     {
       icon: MessageCircle,
       title: "New Chat",
-      description: "Start a conversation with Gemini AI",
+      description: "Start a conversation with Edith AI",
       action: () => {
         const chatId = createChat()
         navigate(`/chat/${chatId}`)
@@ -255,7 +255,7 @@ What would you like to know about this project?`)
               textShadow: '0 0 60px rgba(255,215,0,0.2)'
             }}
           >
-            Gemini AI
+            Edith AI
           </motion.h1>
 
           <motion.p
@@ -403,11 +403,11 @@ What would you like to know about this project?`)
             textShadow: '0 0 10px rgba(255,215,0,0.1)'
           }}
         >
-          <span className="font-medium">Gemini AI</span>
+          <span className="font-medium">Edith AI</span>
           <div className="w-1 h-1 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 shadow-lg" />
           <span>v1.0.0</span>
           <div className="w-1 h-1 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 shadow-lg" />
-          <span className="text-xs opacity-80">Powered by Gemini AI</span>
+          <span className="text-xs opacity-80">Powered by Edith AI</span>
         </motion.div>
 
         {/* Browser Compatibility Status */}

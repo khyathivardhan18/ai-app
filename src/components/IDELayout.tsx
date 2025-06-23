@@ -172,7 +172,7 @@ const IDELayout: React.FC<IDELayoutProps> = ({ projectData }) => {
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
           </div>
           <span className="ml-4 font-medium">
-            {projectData?.name || 'Gemini AI'} - AI-Powered IDE
+            {projectData?.name || 'Edith AI'} - AI-Powered IDE
           </span>
         </div>
       </div>
@@ -305,7 +305,7 @@ const IDELayout: React.FC<IDELayoutProps> = ({ projectData }) => {
                 <div className="h-full flex items-center justify-center bg-zinc-900 text-zinc-500">
                   <div className="text-center">
                     <Code size={48} className="mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-medium mb-2">Welcome to Gemini AI</h3>
+                    <h3 className="text-lg font-medium mb-2">Welcome to Edith AI</h3>
                     <p className="text-sm">Select a file from the explorer to start editing</p>
                   </div>
                 </div>

@@ -193,7 +193,7 @@ const ProjectStarter: React.FC<ProjectStarterProps> = ({ onProjectOpen }) => {
         >
           <MetallicLogo size={80} />
           <h1 className="text-4xl font-black mt-6 bg-gradient-to-r from-yellow-200 via-yellow-100 to-amber-200 bg-clip-text text-transparent">
-            Gemini AI IDE
+            Edith AI IDE
           </h1>
           <p className="text-amber-200/80 mt-2 text-lg">
             AI-Powered Development Environment

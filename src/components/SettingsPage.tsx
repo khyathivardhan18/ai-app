@@ -66,7 +66,7 @@ const SettingsPage: React.FC = () => {
 
           <div className="flex-1">
             <h1 className="text-lg font-semibold">Settings</h1>
-            <p className="text-sm text-slate-400">Configure your Gemini AI experience</p>
+            <p className="text-sm text-slate-400">Configure your Edith AI experience</p>
           </div>
 
           {hasChanges && (

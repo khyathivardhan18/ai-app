@@ -107,11 +107,14 @@ const MessageComponent: React.FC<MessageComponentProps> = ({ message, isStreamin
   )
 }
 
-const ChatInterface: React.FC = () => {
-  const { chatId } = useParams<{ chatId: string }>()
-  const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const { state, addMessage, setCurrentChat, createChat } = useApp()
+interface ChatInterfaceProps {
+  chatId: string;
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ chatId }) => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { state, addMessage, setCurrentChatId, createChat } = useApp();
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [streamingMessage, setStreamingMessage] = useState('')
@@ -183,9 +186,9 @@ const ChatInterface: React.FC = () => {
 
   useEffect(() => {
     if (chatId) {
-      setCurrentChat(chatId)
+      setCurrentChatId(chatId)
     }
-  }, [chatId, setCurrentChat])
+  }, [chatId, setCurrentChatId])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

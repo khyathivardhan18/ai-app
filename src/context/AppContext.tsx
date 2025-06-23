@@ -33,10 +33,12 @@ interface AppState {
 
 interface AppContextType {
   state: AppState
+  getChat: (chatId: string) => Chat | undefined
   createChat: (title?: string) => string
+  updateChat: (chatId: string, updates: Partial<Chat>) => void
   addMessage: (chatId: string, message: Omit<Message, 'id'>) => void
   deleteChat: (chatId: string) => void
-  setCurrentChat: (chatId: string | null) => void
+  setCurrentChatId: (chatId: string | null) => void
   updateSettings: (settings: Partial<AppState['settings']>) => void
 }
 
@@ -100,6 +102,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem('edith-ai-state', JSON.stringify(state))
   }, [state])
 
+  const getChat = (chatId: string) => {
+    return state.chats.find(chat => chat.id === chatId);
+  };
+
   const createChat = (title = 'New Chat'): string => {
     const chatId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const newChat: Chat = {
@@ -116,6 +122,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }))
 
     return chatId
+  }
+
+  const updateChat = (chatId: string, updates: Partial<Chat>) => {
+    setState(prev => ({
+      ...prev,
+      chats: prev.chats.map(chat =>
+        chat.id === chatId ? { ...chat, ...updates } : chat
+      ),
+    }))
   }
 
   const addMessage = (chatId: string, message: Omit<Message, 'id'>) => {
@@ -144,7 +159,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }))
   }
 
-  const setCurrentChat = (chatId: string | null) => {
+  const setCurrentChatId = (chatId: string | null) => {
     setState(prev => ({ ...prev, currentChatId: chatId }))
   }
 
@@ -157,10 +172,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const contextValue: AppContextType = {
     state,
+    getChat,
     createChat,
+    updateChat,
     addMessage,
     deleteChat,
-    setCurrentChat,
+    setCurrentChatId,
     updateSettings
   }
 

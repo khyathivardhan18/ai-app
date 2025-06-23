@@ -6,7 +6,7 @@
     <script type="text/javascript">
       // Get the current path and redirect to the index.html with the path preserved.
       const path = window.location.pathname;
-      const newPath = '/gemini-ai-app' + path;
+      const newPath = '/ai-app' + path.replace('/ai-app', '');
       window.location.replace(newPath);
     </script>
   </head>

@@ -7,5 +7,5 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["bippy/dist/jsx-dev-runtime", "bippy/dist/jsx-runtime"],
   },
-  base: '/gemini-ai-app/',
+  base: '/ai-app/',
 });

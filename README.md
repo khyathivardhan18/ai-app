@@ -34,15 +34,8 @@ Open [http://localhost:5174/ai-app/](http://localhost:5174/ai-app/) in your brow
 
 ## 🌐 GitHub Pages Deployment
 - The app is configured to deploy to GitHub Pages under `/ai-app/`.
-- To deploy:
-```bash
-git add .
-git commit -m "Update"
-git push origin main
-npm run build
-npm run deploy
-```
-- The deployed app will be available at: (https://khyathivardhan18.github.io/ai-app/)
+
+- The deployed app is available at: (https://khyathivardhan18.github.io/ai-app/)
 
 ## 🖥️ Browser Support
 - **Best experience:** Chrome, Edge (full file system access)

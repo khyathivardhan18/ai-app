@@ -42,7 +42,7 @@ git push origin main
 npm run build
 npm run deploy
 ```
-- The deployed app will be available at: `https://khyathivardhan18.github.io/ai-app/`
+- The deployed app will be available at: (https://khyathivardhan18.github.io/ai-app/)
 
 ## 🖥️ Browser Support
 - **Best experience:** Chrome, Edge (full file system access)

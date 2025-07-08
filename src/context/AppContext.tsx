@@ -2,7 +2,7 @@ import type React from 'react'
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 
 // Fixed API key for the application - all users use this key
-const API_KEY = 'REMOVED'
+const API_KEY = 'AIzaSyCFdwhis8UXDT-AuEyCfsGw4ksG9DX5vJg'
 
 interface Message {
   id: string

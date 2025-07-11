@@ -1,8 +1,8 @@
 import type React from 'react'
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 
-// Fixed API key for the application - all users use this key
-const API_KEY = 'AIzaSyCFdwhis8UXDT-AuEyCfsGw4ksG9DX5vJg'
+// Get API key from environment variable
+const API_KEY = import.meta.env.VITE_API_KEY || ''
 
 interface Message {
   id: string
@@ -60,7 +60,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       try {
         const parsed = JSON.parse(saved)
         return {
-          apiKey: API_KEY, // Always use the fixed API key
+          apiKey: API_KEY, // Use API key from environment variable
           chats: parsed.chats?.map((chat: {
             id: string;
             title: string;
@@ -90,7 +90,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     return {
-      apiKey: API_KEY,
+      apiKey: API_KEY, // Use API key from environment variable
       chats: [],
       currentChatId: null,
       theme: 'dark',

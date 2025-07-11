@@ -1,58 +1,53 @@
-# Edith AI IDE
+# Edith AI App
 
-A modern, AI-powered web-based IDE with file explorer, code editor, terminal, and integrated Gemini AI chat assistant.
+## Setup & Security
 
-## ✨ Features
-- **Open any local project** (via File System Access API or folder upload)
-- **File tree** with dropdowns, icons, and custom scrollbars
-- **Tabbed code editor** with syntax highlighting
-- **Integrated terminal** (AI-powered command assistant)
-- **AI chat panel** (Gemini AI, context-aware)
-- **Resizable panels** for a true IDE experience
-- **Browser compatibility warnings** and graceful fallbacks
-- **GitHub Pages** deployment ready
+**Important:** This app uses an API key for Google Gemini. For security, the API key is never committed to the repository.
 
-## 🚀 Getting Started
+### 1. Local Development
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/khyathivardhan18/ai-app.git
-cd ai-app
-```
+1. Copy the `.env` template below into a file named `.env` in the project root:
 
-### 2. Install dependencies
-```bash
-npm install
-```
+    ```env
+    VITE_API_KEY=your_actual_api_key_here
+    ```
 
-### 3. Run the development server
-```bash
-npm run dev
-```
+2. **Never commit your `.env` file!** It is already in `.gitignore`.
 
-Open [http://localhost:5174/ai-app/](http://localhost:5174/ai-app/) in your browser.
+3. Install dependencies and start the app:
 
-## 🌐 GitHub Pages Deployment
-- The app is configured to deploy to GitHub Pages under `/ai-app/`.
+    ```sh
+    npm install
+    npm run dev
+    ```
 
-- The deployed app is available at: (https://khyathivardhan18.github.io/ai-app/)
+### 2. Deployment (GitHub Pages)
 
-## 🖥️ Browser Support
-- **Best experience:** Chrome, Edge (full file system access)
-- **Fallback:** Firefox, Safari (folder upload, demo mode)
+This project uses GitHub Actions to deploy securely:
 
-## 🤖 AI Assistant
-- Powered by Gemini AI
-- Ask coding, debugging, or project questions in the right panel
+- The API key is stored as a GitHub Secret (`VITE_API_KEY`).
+- The workflow injects the secret at build time.
+- The key is never exposed in the repository or build artifacts.
 
-## 📂 Project Structure
-- `src/components/` — All UI components (IDE, FileTree, Editor, Chat, Terminal)
-- `src/context/` — App context and state
-- `src/services/` — Gemini AI integration
-- `src/utils/` — File system and browser compatibility helpers
+#### To deploy:
+1. Go to your repository's **Settings → Secrets and variables → Actions**
+2. Add a new secret:
+    - **Name:** `VITE_API_KEY`
+    - **Value:** your actual API key
+3. Push to the `main` branch. The workflow will build and deploy automatically.
 
-## 🙌 Contributing
-Pull requests welcome! For major changes, open an issue first to discuss what you'd like to change.
+### 3. Security Notes
+- **Never share or commit your API key.**
+- **Rotate your API key** if you believe it has been exposed.
+- **Collaborators** should set up their own `.env` file locally.
 
-## 📄 License
-MIT
+---
+
+## Project Scripts
+- `npm run dev` — Start local dev server
+- `npm run build` — Build for production
+- `npm run preview` — Preview production build
+
+---
+
+For more details, see the workflow file in `.github/workflows/deploy.yml`.

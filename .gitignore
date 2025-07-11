@@ -14,7 +14,7 @@ output/
 *.local
 
 # Lock files (keep only one based on your package manager)
-package-lock.json
+# package-lock.json
 bun.lock
 yarn.lock
 pnpm-lock.yaml

@@ -44,8 +44,14 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
+          
+      - name: Wait for deployment
+        run: sleep 10
 
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
     steps:
